@@ -35,6 +35,14 @@ unsigned char buffer_getc(unsigned int posX, unsigned int posY){
 	return buffer[screen_width*posY+posX];
 }
 
+uchar buffer_isER(uint posX, uint posY){
+	uchar c=buffer_getc(posX, posY);
+	if(c==0 || c=='\n'){
+		return 1;
+	}
+	return 0;
+}
+
 void buffer_save(){
 	FILE *fp;
 	fp=fopen("test.c","w");
@@ -42,12 +50,10 @@ void buffer_save(){
 	uint i,j;
 	for(j=0; j<screen_height; j++){
 		for(i=0; i<screen_width; i++){
-		  if(i==0 && buffer_getc(0, j)=='\0'){
-				break;
-			}
-
-			if(buffer_getc(i, j)=='\n'){
-				fputc('\n', fp);
+		  if(buffer_getc(i, j)==0){
+				if(i!=0){
+					fputc('\n', fp);
+				}
 				break;
 			}
 
@@ -55,9 +61,23 @@ void buffer_save(){
 		}
 	}
 	
-	fputc('\0',fp);
-	
 	fclose(fp);
+}
+
+void cursor_moveX(uint posX){
+	(*cursor).x=posX;
+	move( (*cursor).y, posX);
+}
+
+void cursor_moveY(uint posY){
+	(*cursor).y=posY;
+	move( posY, (*cursor).x);
+}
+
+void cursor_move(uint posX, uint posY){
+	(*cursor).x=posX;
+	(*cursor).y=posY;
+	move(posY, posX);
 }
 
 int main(){
@@ -79,24 +99,53 @@ int main(){
 	
 	while(again){
 		switch(key=getch()){
-		case KEY_DOWN:
+		case KEY_F(2):
 			again=0;
 			break;
 
-		case 10:
-		  buffer_write('\n');
-			(*cursor).y++;
-			(*cursor).x=0;
-			move((*cursor).y, 0);
-			break;
-
-		case KEY_UP:
+		case KEY_F(3):
 			buffer_save();
 			break;
 
+		case 9:
+			buffer_write('\t');
+			addch('#');
+			(*cursor).x++;
+			break;
+
+			//enter
+		case 10:
+		  cursor_move(0, (*cursor).y+1);
+			break;
+
 		case KEY_BACKSPACE:
-			(*cursor).x--;
-			move((*cursor).y, (*cursor).x);
+			if( (*cursor).x!=0){
+				move((*cursor).y, (*cursor).x-1);
+				addch(' ');
+				(*cursor).x--;
+				move((*cursor).y, (*cursor).x);
+			}
+			break;
+			
+		case KEY_UP:
+			if( (*cursor).y!=0){
+				cursor_moveY( (*cursor).y-1);
+			}
+			break;
+
+		case KEY_DOWN:
+			break;
+
+		case KEY_LEFT:
+			if( (*cursor).x!=0){
+				cursor_moveX( (*cursor).x-1);
+			}
+			break;
+
+		case KEY_RIGHT:
+			if( !buffer_isER( (*cursor).x, (*cursor).y)){
+				cursor_moveX( (*cursor).x+1);
+			}
 			break;
 			
 		default:
