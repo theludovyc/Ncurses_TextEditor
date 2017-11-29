@@ -5,6 +5,8 @@
 
 #include <ncurses.h>
 
+#include "gListChars.cc"
+
 unsigned char again=1;
 
 int key;
@@ -14,29 +16,35 @@ Vec *cursor;
 unsigned int screen_width;
 unsigned int screen_height;
 
-unsigned char *buffer;
+GListChars *buffer;
 
-void buffer_write(unsigned int posX, unsigned int posY, unsigned char c){
-	buffer[screen_width*posY+posX]=c;
+void buffer_write(uint posX, uchar c){
+	(*buffer).getChars()[posX]=c;
 }
 
 void buffer_init(){
+	buffer=new GListChars();
+
+	(*buffer).addAfter(screen_width);
+
+	/*
 	int i;
 	for(i=0; i<screen_height;i++){
 		buffer_write(0, i, '\0');
 	}
+	*/
 }
 
-void buffer_write(unsigned char c){
-  buffer_write( (*cursor).x, (*cursor).y, c);
+void buffer_write(uchar c){
+  buffer_write( (*cursor).x, c);
 }
 
-unsigned char buffer_getc(unsigned int posX, unsigned int posY){
-	return buffer[screen_width*posY+posX];
+uchar buffer_getc(uint posX){
+	return (*buffer).getChars()[posX];
 }
 
-uchar buffer_isER(uint posX, uint posY){
-	uchar c=buffer_getc(posX, posY);
+uchar buffer_isER(uint posX){
+	uchar c=buffer_getc(posX);
 	if(c==0 || c=='\n'){
 		return 1;
 	}
@@ -47,17 +55,25 @@ void buffer_save(){
 	FILE *fp;
 	fp=fopen("test.c","w");
 
+	if( (*cursor).y!=0){
+		(*buffer).rollBefore((*cursor).y);
+	}
+		
 	uint i,j;
-	for(j=0; j<screen_height; j++){
-		for(i=0; i<screen_width; i++){
-		  if(buffer_getc(i, j)==0){
-				if(i!=0){
-					fputc('\n', fp);
-				}
+	uchar c;
+
+	for(j=0; j<(*buffer).getLength(); j++){
+		i=0;
+	  while(true){
+			c=buffer_getc(i);
+			if(c==0){
+				fputc('\n', fp);
+				(*buffer).rollAfter();
 				break;
 			}
 
-			fputc(buffer_getc(i, j), fp);
+			fputc(c, fp);
+			i++;
 		}
 	}
 	
@@ -69,9 +85,45 @@ void cursor_moveX(uint posX){
 	move( (*cursor).y, posX);
 }
 
-void cursor_moveY(uint posY){
+void cursor_move(uint posY){
 	(*cursor).y=posY;
 	move( posY, (*cursor).x);
+}
+
+void cursor_reset(){
+	move( (*cursor).y, (*cursor).x);
+}
+
+void cursor_moveUp(){
+	(*buffer).rollBefore();
+	(*cursor).y--;
+
+	if( buffer_getc(0) == 0){
+		(*cursor).x=0;
+	}
+	
+	cursor_reset();
+}
+
+void cursor_moveDown(){
+	(*buffer).rollAfter();
+	(*cursor).y++;
+
+	if( buffer_getc(0) == 0){
+		(*cursor).x=0;
+	}
+	
+	cursor_reset();
+}
+
+void cursor_moveLeft(){
+	(*cursor).x--;
+	cursor_reset();
+}
+
+void cursor_moveRight(){
+	(*cursor).x++;
+	cursor_reset();
 }
 
 void cursor_move(uint posX, uint posY){
@@ -89,11 +141,6 @@ int main(){
 	noecho();
 
 	getmaxyx(stdscr, screen_height, screen_width);
-	
-	buffer=(unsigned char*)calloc(screen_width*screen_height, sizeof(char));
-	if(buffer==NULL){
-		Tool_error0MemoryAllocation("Buffer malloc");
-	}
 
 	buffer_init();
 	
@@ -115,25 +162,29 @@ int main(){
 
 			//enter
 		case 10:
+			(*buffer).addAfter(screen_width);
 		  cursor_move(0, (*cursor).y+1);
 			break;
 
 		case KEY_BACKSPACE:
 			if( (*cursor).x!=0){
-				move((*cursor).y, (*cursor).x-1);
+				cursor_moveLeft();
+				buffer_write(0);
 				addch(' ');
-				(*cursor).x--;
-				move((*cursor).y, (*cursor).x);
+				cursor_reset();
 			}
 			break;
 			
 		case KEY_UP:
 			if( (*cursor).y!=0){
-				cursor_moveY( (*cursor).y-1);
+				cursor_moveUp();
 			}
 			break;
 
 		case KEY_DOWN:
+			if((*cursor).y<(*buffer).getLength()-1 && (*cursor).y<screen_height){
+				cursor_moveDown();
+			}
 			break;
 
 		case KEY_LEFT:
@@ -143,8 +194,8 @@ int main(){
 			break;
 
 		case KEY_RIGHT:
-			if( !buffer_isER( (*cursor).x, (*cursor).y)){
-				cursor_moveX( (*cursor).x+1);
+			if( !buffer_isER( (*cursor).x) ){
+				cursor_moveRight();
 			}
 			break;
 			
@@ -152,12 +203,14 @@ int main(){
 		  buffer_write(key);
 			addch(key);
 			(*cursor).x++;
-			move((*cursor).y, (*cursor).x);
 		}
 
 		refresh();
 	}
-		
+	
+	delete(cursor);
+	delete(buffer);
+	
 	endwin();
 
 	return 0;
