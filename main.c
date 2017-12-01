@@ -1,29 +1,24 @@
 #define _Main
 
 #include "../MyLibCC/Tool.cc"
-#include "../MyLibCC/Geom/vec.cc"
 
 #include <ncurses.h>
 
-#include "gListChars.cc"
+#include "buffer.cc"
+#include "cursor.cc"
 
 unsigned char again=1;
 
 int key;
 
-Vec *cursor;
-
 unsigned int screen_width;
 unsigned int screen_height;
 
-GListChars *buffer;
-
-void buffer_write(uint posX, uchar c){
-	(*buffer).getChars()[posX]=c;
-}
+Buffer *buffer;
+Cursor *cursor;
 
 void buffer_init(){
-	buffer=new GListChars();
+	buffer=new Buffer();
 
 	(*buffer).addAfter(screen_width);
 
@@ -36,15 +31,11 @@ void buffer_init(){
 }
 
 void buffer_write(uchar c){
-  buffer_write( (*cursor).x, c);
-}
-
-uchar buffer_getc(uint posX){
-	return (*buffer).getChars()[posX];
+  (*buffer).write( (*cursor).x, c);
 }
 
 uchar buffer_isER(uint posX){
-	uchar c=buffer_getc(posX);
+	uchar c=(*buffer).getC(posX);
 	if(c==0 || c=='\n'){
 		return 1;
 	}
@@ -65,7 +56,7 @@ void buffer_save(){
 	for(j=0; j<(*buffer).getLength(); j++){
 		i=0;
 	  while(true){
-			c=buffer_getc(i);
+			c=(*buffer).getC(i);
 			if(c==0){
 				fputc('\n', fp);
 				(*buffer).rollAfter();
@@ -80,60 +71,16 @@ void buffer_save(){
 	fclose(fp);
 }
 
-void cursor_moveX(uint posX){
-	(*cursor).x=posX;
-	move( (*cursor).y, posX);
-}
-
-void cursor_move(uint posY){
-	(*cursor).y=posY;
-	move( posY, (*cursor).x);
-}
-
-void cursor_reset(){
-	move( (*cursor).y, (*cursor).x);
-}
-
 void cursor_moveUp(){
-	(*buffer).rollBefore();
-	(*cursor).y--;
-
-	if( buffer_getc(0) == 0){
-		(*cursor).x=0;
-	}
-	
-	cursor_reset();
+	(*cursor).moveUp(buffer);
 }
 
 void cursor_moveDown(){
-	(*buffer).rollAfter();
-	(*cursor).y++;
-
-	if( buffer_getc(0) == 0){
-		(*cursor).x=0;
-	}
-	
-	cursor_reset();
-}
-
-void cursor_moveLeft(){
-	(*cursor).x--;
-	cursor_reset();
-}
-
-void cursor_moveRight(){
-	(*cursor).x++;
-	cursor_reset();
-}
-
-void cursor_move(uint posX, uint posY){
-	(*cursor).x=posX;
-	(*cursor).y=posY;
-	move(posY, posX);
+	(*cursor).moveDown(buffer);
 }
 
 int main(){
-	cursor=new Vec(0, 0);
+	cursor=new Cursor();
 	
 	initscr();
 
@@ -163,15 +110,15 @@ int main(){
 			//enter
 		case 10:
 			(*buffer).addAfter(screen_width);
-		  cursor_move(0, (*cursor).y+1);
+		  (*cursor).moveXY(0, (*cursor).y+1);
 			break;
 
 		case KEY_BACKSPACE:
 			if( (*cursor).x!=0){
-				cursor_moveLeft();
+				(*cursor).moveLeft();
 				buffer_write(0);
 				addch(' ');
-				cursor_reset();
+				(*cursor).reset();
 			}
 			break;
 			
@@ -189,13 +136,13 @@ int main(){
 
 		case KEY_LEFT:
 			if( (*cursor).x!=0){
-				cursor_moveX( (*cursor).x-1);
+				(*cursor).moveLeft();
 			}
 			break;
 
 		case KEY_RIGHT:
 			if( !buffer_isER( (*cursor).x) ){
-				cursor_moveRight();
+				(*cursor).moveRight();
 			}
 			break;
 			
