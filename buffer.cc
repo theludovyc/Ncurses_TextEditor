@@ -11,7 +11,7 @@ public:
 	}
 
 	void write(uint posX, uchar c){
-		  getChars()[posX]=c;
+		getChars()[posX]=c;
 	}
 
 	uchar getC(uint posX){

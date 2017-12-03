@@ -30,8 +30,63 @@ void buffer_init(){
 	*/
 }
 
+uchar buffer_getC(){
+	return (*buffer).getC((*cursor).x);
+}
+
+void buffer_writeAfter(uchar c){
+	uchar charIn=c;
+	uchar charSave;
+	uint posX=(*cursor).x;
+
+	do{
+		charSave=(*buffer).getC(posX);
+
+		(*buffer).write(posX, charIn);
+		addch(charIn);
+
+		charIn=charSave;
+
+		posX++;
+	}while(charSave!=0);
+
+	(*cursor).x++;
+	(*cursor).reset();
+}
+
 void buffer_write(uchar c){
-  (*buffer).write( (*cursor).x, c);
+	(*buffer).write((*cursor).x, c);
+}
+
+void buffer_rem(){
+	if( (*cursor).x!=0){
+		if(buffer_getC() == 0){
+			(*buffer).write((*cursor).x-1, 0);
+			mvaddch((*cursor).y, (*cursor).x-1, ' ');
+			(*cursor).moveLeft();
+			return;
+		}
+
+		(*cursor).moveLeft();
+		uint posX=(*cursor).x;
+		uint c;
+		
+		do{
+			c=(*buffer).getC(posX+1);
+			(*buffer).write(posX, c);
+			
+			if(c==0){
+				addch(' ');
+				break;
+			}else{
+				addch(c);
+			}
+			
+			posX++;
+		}while(true);
+
+		(*cursor).reset();
+	}
 }
 
 uchar buffer_isER(uint posX){
@@ -114,12 +169,7 @@ int main(){
 			break;
 
 		case KEY_BACKSPACE:
-			if( (*cursor).x!=0){
-				(*cursor).moveLeft();
-				buffer_write(0);
-				addch(' ');
-				(*cursor).reset();
-			}
+			buffer_rem();
 			break;
 			
 		case KEY_UP:
@@ -147,9 +197,9 @@ int main(){
 			break;
 			
 		default:
-		  buffer_write(key);
-			addch(key);
-			(*cursor).x++;
+		  buffer_writeAfter(key);
+			//addch(key);
+			//(*cursor).x++;
 		}
 
 		refresh();
