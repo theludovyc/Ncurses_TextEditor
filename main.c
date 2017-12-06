@@ -1,6 +1,6 @@
 #define _Main
 
-#include "../MyLibCC/Tool.cc"
+#include "../MyLibCC/tool.cc"
 
 #include <ncurses.h>
 
@@ -11,16 +11,13 @@ unsigned char again=1;
 
 int key;
 
-unsigned int screen_width;
-unsigned int screen_height;
-
 Buffer *buffer;
 Cursor *cursor;
 
 void buffer_init(){
 	buffer=new Buffer();
 
-	(*buffer).addAfter(screen_width);
+	(*buffer).addAfter();
 
 	/*
 	int i;
@@ -97,6 +94,11 @@ uchar buffer_isER(uint posX){
 	return 0;
 }
 
+void buffer_addLine(){
+	(*buffer).addAfter();
+	(*cursor).moveXY(0, (*cursor).y+1);
+}
+
 void buffer_save(){
 	FILE *fp;
 	fp=fopen("test.c","w");
@@ -126,12 +128,42 @@ void buffer_save(){
 	fclose(fp);
 }
 
+void cursor_move0(){
+	if( (*buffer).getC(0) == 0){
+		(*cursor).x=0;
+	}else if( (*cursor).x>0 ){
+		while( (*buffer).getC( (*cursor).x-1 ) == 0){
+			(*cursor).x--;
+		}
+	}
+}
+
 void cursor_moveUp(){
-	(*cursor).moveUp(buffer);
+	(*buffer).rollBefore();
+	(*cursor).y--;
+
+	cursor_move0();
+	
+	(*cursor).reset();
 }
 
 void cursor_moveDown(){
-	(*cursor).moveDown(buffer);
+	(*buffer).rollAfter();
+	(*cursor).y++;
+
+  cursor_move0();
+	
+	(*cursor).reset();
+}
+
+void cursor_moveLeft(){
+	(*cursor).x--;
+	(*cursor).reset();
+}
+
+void cursor_moveRight(){
+	(*cursor).x++;
+	(*cursor).reset();
 }
 
 int main(){
@@ -139,10 +171,9 @@ int main(){
 	
 	initscr();
 
-	keypad(stdscr, TRUE);
+	raw();
 	noecho();
-
-	getmaxyx(stdscr, screen_height, screen_width);
+	keypad(stdscr, TRUE);
 
 	buffer_init();
 	
@@ -164,8 +195,7 @@ int main(){
 
 			//enter
 		case 10:
-			(*buffer).addAfter(screen_width);
-		  (*cursor).moveXY(0, (*cursor).y+1);
+			buffer_addLine();
 			break;
 
 		case KEY_BACKSPACE:
@@ -179,20 +209,20 @@ int main(){
 			break;
 
 		case KEY_DOWN:
-			if((*cursor).y<(*buffer).getLength()-1 && (*cursor).y<screen_height){
+			if((*cursor).y<(*buffer).getLength()-1 && (*cursor).y<LINES){
 				cursor_moveDown();
 			}
 			break;
 
 		case KEY_LEFT:
 			if( (*cursor).x!=0){
-				(*cursor).moveLeft();
+				cursor_moveLeft();
 			}
 			break;
 
 		case KEY_RIGHT:
 			if( !buffer_isER( (*cursor).x) ){
-				(*cursor).moveRight();
+				cursor_moveRight();
 			}
 			break;
 			
