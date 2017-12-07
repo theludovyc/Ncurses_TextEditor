@@ -5,60 +5,67 @@
 #endif
 
 class Cursor : public Vec{
+private:
+	void move0(Buffer *buffer){
+		if( (*buffer).getC(0) == 0){
+		  x=0;
+		}else if( x>0 ){
+			while( (*buffer).getC( x-1 ) == 0){
+			  x--;
+			}
+		}
+	}
+	
 public:
 	Cursor()
 		:Vec(){
 	}
 
-	void moveX(uint posX){
+	void moveX(WINDOW *w, uint posX){
 		x=posX;
-		move( y, posX);
+		wmove(w, y, posX);
 	}
 
-	void moveY(uint posY){
+	void moveY(WINDOW *w, uint posY){
 	  y=posY;
-		move( posY, x);
+		wmove(w, posY, x);
 	}
 
-	void reset(){
-		move(y, x);
+	void reset(WINDOW *w){
+		wmove(w, y, x);
 	}
 
-	void moveUp(Buffer *buffer){
+	void moveUp(WINDOW *w, Buffer *buffer){
 		(*buffer).rollBefore();
 	  y--;
 
-		if( (*buffer).getC(0) == 0){
-		  x=0;
-		}
+	  move0(buffer);
 	
-	  reset();
+	  reset(w);
 	}
 
-	void moveDown(Buffer *buffer){
-		(*buffer).rollAfter();
+	void moveDown(WINDOW *w, Buffer *buffer){
+	  (*buffer).rollAfter();
 	  y++;
 
-		if( (*buffer).getC(0) == 0){
-		  x=0;
-		}
+	  move0(buffer);
 	
-	  reset();
+	  reset(w);
 	}
 
-	void moveLeft(){
+	void moveLeft(WINDOW *w){
 	  x--;
-	  reset();
+	  reset(w);
 	}
 
-	void moveRight(){
+	void moveRight(WINDOW *w){
 	  x++;
-	  reset();
+	  reset(w);
 	}
 
-	void moveXY(uint posX, uint posY){
+	void moveXY(WINDOW *w, uint posX, uint posY){
 	  x=posX;
 	  y=posY;
-		reset();
+		reset(w);
 	}
 };
