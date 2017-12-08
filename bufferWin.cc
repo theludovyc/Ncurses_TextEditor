@@ -2,16 +2,19 @@
 
 #include "buffer.cc"
 #include "cursor.cc"
+#include "lineWin.cc"
 
 class BufferWin{
 private:
 	WINDOW *win;
-	WINDOW *win_line;
 	Cursor *cursor;
 	Buffer *buffer;
+	LineWin *lw;
 
 	void buffer_write(uchar c){
 		(*buffer).write((*cursor).x, c);
+		waddch(win, c);
+		(*cursor).x++;
 	}
 
 	void buffer_writeAfter(uchar c){
@@ -23,6 +26,7 @@ private:
 			charSave=(*buffer).getC(posX);
 
 			(*buffer).write(posX, charIn);
+			
 			waddch(win, charIn);
 
 			charIn=charSave;
@@ -37,9 +41,9 @@ private:
 	void buffer_addLine(){
 		(*buffer).addAfter();
 		(*cursor).moveXY(win, 0, (*cursor).y+1);
-		mvwprintw(win_line, (*cursor).y, 0, "%d", (*cursor).y);
+		/*mvwprintw(win_line, (*cursor).y, 0, "%d", (*cursor).y);
 		touchwin(win_line);
-		wrefresh(win_line);
+		wrefresh(win_line);*/
 	}
 
 	uchar buffer_getC(){
@@ -103,22 +107,24 @@ private:
 	
 public:
 	BufferWin(WINDOW *orig, int nlines, int ncols, int posX, int posY){
-		win=derwin(orig, nlines, ncols-2, posY, posX+2);
-		win_line=derwin(orig, nlines, 2, 0, 0);
+		lw=new LineWin(orig, nlines, posX, posY);
+		win=derwin(orig, nlines, ncols-(*lw).getCols(), posY, posX+(*lw).getCols());
 
 		cursor=new Cursor();
 		buffer=new Buffer();
 
 		(*buffer).addAfter();
-		waddch(win_line, '0');
-		touchwin(orig);
-		wrefresh(win_line);
+
+		(*lw).refresh(0, nlines);
+
+		wmove(stdscr, 0, (*lw).getCols());
 	}
 
 	~BufferWin(){
 		delwin(win);
 		delete(cursor);
 		delete(buffer);
+		delete(lw);
 	}
 
 	void save(){

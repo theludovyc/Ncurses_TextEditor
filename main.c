@@ -19,8 +19,7 @@ int main(){
 	noecho();
 	keypad(stdscr, TRUE);
 
-	bufferWin=new BufferWin(stdscr, LINES, 10, 0, 0);
-	move(0, 2);
+	bufferWin=new BufferWin(stdscr, LINES, COLS, 0, 0);
 	
 	while(again){
 		switch(key=getch()){

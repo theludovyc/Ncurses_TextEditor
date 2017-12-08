@@ -21,7 +21,11 @@ public:
 		if(c==0 && (*f).getLength()>32 && posX<(*f).getLength()-48){
 			(*f).resize_add(-32);
 		}else if(posX > (*f).getLength()-8){
+			uint oldL=(*f).getLength();
 			(*f).resize_add(32);
+			for(; oldL<(*f).getLength(); oldL++){
+				(*(*f)[oldL])=0;
+			}
 		}
 		
 		(*(*f)[posX])=c;
