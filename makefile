@@ -1,7 +1,7 @@
 OK_COLOR = \033[0;32m
 
 a.out:
-	@g++ -o $@ main.c -lncurses -w
+	@g++ -o $@ main.c -lncurses -lMyLibCC -L"../MyLibCC/Build" -w
 	@printf "%b" "$(OK_COLOR)compil success\n"
 
 clean:
